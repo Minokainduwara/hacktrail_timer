@@ -1,24 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'admin_menu.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TimerScreen extends StatefulWidget {
-  final int hackathonDuration; // Duration in seconds, can be set from admin
-
-  const TimerScreen({super.key, this.hackathonDuration = 6 * 60 * 60});
+  const TimerScreen({super.key});
 
   @override
   State<TimerScreen> createState() => _TimerScreenState();
 }
 
-class _TimerScreenState extends State<TimerScreen>
-    with SingleTickerProviderStateMixin {
+class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin {
   int openingCountdown = 10;
   bool showHackathon = false;
-  bool showQuote = false; // Show quote at the end of countdown
+  bool showIntroQuote = false;
 
-  late int remainingTime;
+  int hackathonDuration = 6 * 60 * 60; // default 6 hours
+  int remainingTime = 6 * 60 * 60;
   bool paused = false;
 
   Timer? openingTimer;
@@ -31,41 +29,49 @@ class _TimerScreenState extends State<TimerScreen>
   @override
   void initState() {
     super.initState();
-    remainingTime = widget.hackathonDuration;
-
     _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
-      lowerBound: 0.8,
-      upperBound: 1.2,
     );
 
-    _scaleAnimation = CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeInOut,
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
 
-    startOpeningCountdown();
+    loadTimerSettings();
+  }
+
+  Future<void> loadTimerSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Load admin-set hackathon duration and countdown
+    hackathonDuration = prefs.getInt('hackathonDuration') ?? hackathonDuration;
+    openingCountdown = prefs.getInt('openingCountdown') ?? openingCountdown;
+    remainingTime = prefs.getInt('remainingTime') ?? hackathonDuration;
+
+    // Start appropriate timer
+    if (prefs.containsKey('remainingTime')) {
+      setState(() => showHackathon = true);
+      startHackathonTimer();
+    } else {
+      startOpeningCountdown();
+    }
   }
 
   void startOpeningCountdown() {
     openingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (openingCountdown > 1) {
-        if (!paused) {
-          await audioPlayer.play(AssetSource('beep.mp3'));
-          setState(() => openingCountdown--);
-          _scaleController.forward(from: 0.8);
-        }
+      if (openingCountdown > 0) {
+        await audioPlayer.play(AssetSource('beep.mp3'));
+        setState(() => openingCountdown--);
+        _scaleController.forward(from: 0.0);
       } else {
         timer.cancel();
-        setState(() {
-          showQuote = true;
-        });
+        await audioPlayer.stop();
+        setState(() => showIntroQuote = true);
 
-        // Show quote for 3 seconds, then start hackathon
         Future.delayed(const Duration(seconds: 3), () {
           setState(() {
-            showQuote = false;
+            showIntroQuote = false;
             showHackathon = true;
           });
           startHackathonTimer();
@@ -75,12 +81,17 @@ class _TimerScreenState extends State<TimerScreen>
   }
 
   void startHackathonTimer() {
-    hackathonTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    hackathonTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!paused) {
         if (remainingTime > 0) {
           setState(() => remainingTime--);
+
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('remainingTime', remainingTime);
         } else {
           timer.cancel();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.remove('remainingTime');
         }
       }
     });
@@ -110,12 +121,12 @@ class _TimerScreenState extends State<TimerScreen>
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/backdrop.jpeg"),
+            image: AssetImage("assets/backdrop.png"),
             fit: BoxFit.cover,
           ),
         ),
         child: Center(
-          child: showQuote
+          child: showIntroQuote
               ? const Text(
                   "From concept to code,\nlet the magic unfold!",
                   textAlign: TextAlign.center,
@@ -146,10 +157,9 @@ class _TimerScreenState extends State<TimerScreen>
                             color: Colors.white,
                             shadows: [
                               Shadow(
-                                blurRadius: 10,
-                                color: Colors.black,
-                                offset: Offset(3, 3),
-                              )
+                                  blurRadius: 10,
+                                  color: Colors.black,
+                                  offset: Offset(3, 3)),
                             ],
                           ),
                         ),
@@ -179,24 +189,6 @@ class _TimerScreenState extends State<TimerScreen>
                               ),
                               child: const Text("▶ Resume",
                                   style: TextStyle(fontSize: 20)),
-                            ),
-                            const SizedBox(width: 20),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => const AdminMenu()),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 15),
-                              ),
-                              child: const Text("⚙ Admin Menu",
-                                  style: TextStyle(fontSize: 16)),
                             ),
                           ],
                         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'login_screen.dart';
 
 class AdminMenu extends StatefulWidget {
   const AdminMenu({super.key});
@@ -9,55 +10,79 @@ class AdminMenu extends StatefulWidget {
 }
 
 class _AdminMenuState extends State<AdminMenu> {
-  final TextEditingController _hoursController = TextEditingController();
-  final TextEditingController _minutesController = TextEditingController();
+  final TextEditingController durationController = TextEditingController();
+  final TextEditingController countdownController = TextEditingController();
 
-  Future<void> _saveDuration() async {
-    final prefs = await SharedPreferences.getInstance();
-    int hours = int.tryParse(_hoursController.text) ?? 0;
-    int minutes = int.tryParse(_minutesController.text) ?? 0;
+  Future<void> saveTimerSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    int totalSeconds = hours * 3600 + minutes * 60;
-    await prefs.setInt('hackathon_duration', totalSeconds);
+    int? duration = int.tryParse(durationController.text);
+    int? countdown = int.tryParse(countdownController.text);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Duration saved!")),
-    );
+    if (duration != null && countdown != null) {
+      await prefs.setInt('hackathonDuration', duration * 3600); // hours to seconds
+      await prefs.setInt('openingCountdown', countdown);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Settings saved successfully!")),
+      );
+    }
   }
 
-  @override
-  void dispose() {
-    _hoursController.dispose();
-    _minutesController.dispose();
-    super.dispose();
+  Future<void> clearTimerSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('remainingTime');
+    await prefs.remove('hackathonDuration');
+    await prefs.remove('openingCountdown');
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Admin Menu")),
+      appBar: AppBar(
+        title: const Text('Admin Menu'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+            );
+          },
+        ),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
             TextField(
-              controller: _hoursController,
+              controller: durationController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: "Hours",
-              ),
+                  labelText: "Hackathon Duration (hours)"),
             ),
+            const SizedBox(height: 20),
             TextField(
-              controller: _minutesController,
+              controller: countdownController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: "Minutes",
-              ),
+                  labelText: "Opening Countdown (seconds)"),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: saveTimerSettings,
+              child: const Text("Save Timer Settings"),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _saveDuration,
-              child: const Text("Save Timer"),
+              onPressed: clearTimerSettings,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text("Clear Timer Settings"),
             ),
           ],
         ),

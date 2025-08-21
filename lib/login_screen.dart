@@ -15,17 +15,15 @@ class _LoginScreenState extends State<LoginScreen> {
   String error = '';
 
   void login() {
-    String username = usernameController.text.trim();
-    String password = passwordController.text.trim();
+    String username = usernameController.text;
+    String password = passwordController.text;
 
     if (username == 'user' && password == '1234') {
-      // Navigate to user start screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const StartScreen()),
       );
     } else if (username == 'admin' && password == 'admin123') {
-      // Navigate to admin menu
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const AdminMenu()),

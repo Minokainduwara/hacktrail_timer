@@ -12,8 +12,9 @@ class TimerScreen extends StatefulWidget {
 class _TimerScreenState extends State<TimerScreen>
     with SingleTickerProviderStateMixin {
   int openingCountdown = 10;
+  bool showCountdown = true;
+  bool showIntro = false; // intro will show after countdown
   bool showHackathon = false;
-  bool showIntro = true; // show intro text first
 
   static const int hackathonDuration = 6 * 60 * 60; // 6 hours
   int remainingTime = hackathonDuration;
@@ -21,6 +22,7 @@ class _TimerScreenState extends State<TimerScreen>
 
   Timer? openingTimer;
   Timer? hackathonTimer;
+
   final AudioPlayer audioPlayer = AudioPlayer();
 
   late AnimationController _scaleController;
@@ -33,41 +35,36 @@ class _TimerScreenState extends State<TimerScreen>
     _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
-      lowerBound: 0.8,
-      upperBound: 1.2,
     );
 
-    _scaleAnimation = CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.easeInOut,
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
     );
 
-    startIntro();
-  }
-
-  void startIntro() {
-    // Show intro text for 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      setState(() {
-        showIntro = false; // hide intro
-      });
-      startOpeningCountdown();
-    });
+    startOpeningCountdown();
   }
 
   void startOpeningCountdown() {
     openingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (openingCountdown > 1) {
-        // Play beep sound
+      if (openingCountdown > 0) {
         await audioPlayer.play(AssetSource('beep.mp3'));
         setState(() => openingCountdown--);
-
-        // Animate scale
         _scaleController.forward(from: 0.8);
       } else {
         timer.cancel();
-        setState(() => showHackathon = true);
-        startHackathonTimer();
+        setState(() {
+          showCountdown = false;
+          showIntro = true; // show the quote now
+        });
+
+        // Show quote for 3 seconds then start hackathon timer
+        Future.delayed(const Duration(seconds: 3), () {
+          setState(() {
+            showIntro = false;
+            showHackathon = true;
+          });
+          startHackathonTimer();
+        });
       }
     });
   }
@@ -95,8 +92,8 @@ class _TimerScreenState extends State<TimerScreen>
   void dispose() {
     openingTimer?.cancel();
     hackathonTimer?.cancel();
-    audioPlayer.dispose();
     _scaleController.dispose();
+    audioPlayer.dispose();
     super.dispose();
   }
 
@@ -108,100 +105,98 @@ class _TimerScreenState extends State<TimerScreen>
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/backdrop.jpeg"), // background image
+            image: AssetImage("assets/backdrop.jpeg"),
             fit: BoxFit.cover,
           ),
         ),
         child: Center(
-          child: showIntro
-              ? AnimatedOpacity(
-                  opacity: showIntro ? 1.0 : 0.0,
-                  duration: const Duration(seconds: 1),
-                  child: const Text(
-                    "From concept to code,\nlet the magic unfold!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 40,
+          child: showCountdown
+              ? ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Text(
+                    "$openingCountdown",
+                    style: const TextStyle(
+                      fontSize: 100,
                       fontWeight: FontWeight.bold,
                       color: Colors.amber,
                       shadows: [
                         Shadow(
-                          blurRadius: 10,
-                          color: Colors.white,
-                          offset: Offset(2, 2),
-                        )
+                            blurRadius: 10,
+                            color: Colors.black,
+                            offset: Offset(4, 4)),
                       ],
                     ),
                   ),
                 )
-              : showHackathon
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          remainingTime > 0
-                              ? formatTime(remainingTime)
-                              : "Hackathon Over 🎉",
-                          style: const TextStyle(
-                            fontSize: 60,
-                            fontWeight: FontWeight.bold,
+              : showIntro
+                  ? const Text(
+                      "From concept to code,\nlet the magic unfold!",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 10,
                             color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                  blurRadius: 10,
-                                  color: Colors.black,
-                                  offset: Offset(3, 3)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                        Row(
+                            offset: Offset(2, 2),
+                          )
+                        ],
+                      ),
+                    )
+                  : showHackathon
+                      ? Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            ElevatedButton(
-                              onPressed: () => setState(() => paused = true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.amber,
-                                foregroundColor: Colors.black,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 30, vertical: 15),
+                            Text(
+                              remainingTime > 0
+                                  ? formatTime(remainingTime)
+                                  : "Hackathon Over 🎉",
+                              style: const TextStyle(
+                                fontSize: 60,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                      blurRadius: 10,
+                                      color: Colors.black,
+                                      offset: Offset(3, 3)),
+                                ],
                               ),
-                              child: const Text("⏸ Pause",
-                                  style: TextStyle(fontSize: 20)),
                             ),
-                            const SizedBox(width: 20),
-                            ElevatedButton(
-                              onPressed: () => setState(() => paused = false),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 30, vertical: 15),
-                              ),
-                              child: const Text("▶ Resume",
-                                  style: TextStyle(fontSize: 20)),
+                            const SizedBox(height: 40),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () => setState(() => paused = true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.amber,
+                                    foregroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 30, vertical: 15),
+                                  ),
+                                  child: const Text("⏸ Pause",
+                                      style: TextStyle(fontSize: 20)),
+                                ),
+                                const SizedBox(width: 20),
+                                ElevatedButton(
+                                  onPressed: () => setState(() => paused = false),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 30, vertical: 15),
+                                  ),
+                                  child: const Text("▶ Resume",
+                                      style: TextStyle(fontSize: 20)),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
-                    )
-                  : ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Text(
-                        "$openingCountdown",
-                        style: const TextStyle(
-                          fontSize: 100,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber,
-                          shadows: [
-                            Shadow(
-                                blurRadius: 10,
-                                color: Colors.black,
-                                offset: Offset(4, 4)),
-                          ],
-                        ),
-                      ),
-                    ),
+                        )
+                      : const SizedBox.shrink(),
         ),
       ),
     );

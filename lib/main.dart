@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
+import 'timer_screen.dart';
+import 'start_screen.dart';
+import 'admin_menu.dart';
 
 void main() {
-  runApp(const HackathonTimerApp());
+  runApp(const MyApp());
 }
 
-class HackathonTimerApp extends StatelessWidget {
-  const HackathonTimerApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Hackathon Timer',
-      theme: ThemeData.dark(),
-      home: const LoginScreen(), // Start with login screen
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.amber,
+      ),
+      home: const LoginScreen(),
+      routes: {
+        '/start': (context) => const StartScreen(),
+        '/timer': (context) => const TimerScreen(),
+        '/admin': (context) => const AdminMenu(),
+      },
     );
   }
 }

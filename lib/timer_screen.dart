@@ -117,7 +117,7 @@ class _TimerScreenState extends State<TimerScreen>
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage("assets/backdrop.jpeg"),
+            image: AssetImage("assets/backdrop.png"),
             fit: BoxFit.cover,
           ),
         ),

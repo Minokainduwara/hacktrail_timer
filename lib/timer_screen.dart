@@ -45,29 +45,41 @@ class _TimerScreenState extends State<TimerScreen>
   }
 
   void startOpeningCountdown() {
-    openingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (openingCountdown > 0) {
-        await audioPlayer.play(AssetSource('beep.mp3'));
-        setState(() => openingCountdown--);
-        _scaleController.forward(from: 0.8);
-      } else {
-        timer.cancel();
-        setState(() {
-          showCountdown = false;
-          showIntro = true; // show the quote now
-        });
+  openingTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+    if (openingCountdown > 0) {
+      if (!paused) {
+        // Stop any currently playing beep
+        await audioPlayer.stop();
 
-        // Show quote for 3 seconds then start hackathon timer
-        Future.delayed(const Duration(seconds: 3), () {
-          setState(() {
-            showIntro = false;
-            showHackathon = true;
-          });
-          startHackathonTimer();
-        });
+        // Play beep sound
+        await audioPlayer.play(AssetSource('beep.mp3'));
+
+        setState(() => openingCountdown--);
+
+        // Animate scale
+        _scaleController.forward(from: 0.8);
       }
-    });
-  }
+    } else {
+      // Stop any beep sound when countdown ends
+      await audioPlayer.stop();
+
+      timer.cancel();
+      setState(() {
+        showCountdown = false;
+        showIntro = true;
+      });
+
+      Future.delayed(const Duration(seconds: 3), () {
+        setState(() {
+          showIntro = false;
+          showHackathon = true;
+        });
+        startHackathonTimer();
+      });
+    }
+  });
+}
+
 
   void startHackathonTimer() {
     hackathonTimer = Timer.periodic(const Duration(seconds: 1), (timer) {

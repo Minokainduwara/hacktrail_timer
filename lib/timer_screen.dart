@@ -131,7 +131,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                   "From concept to code,\nlet the magic unfold!",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 40,
+                    fontSize: 70,
                     fontWeight: FontWeight.bold,
                     color: Colors.amber,
                     shadows: [
@@ -152,7 +152,7 @@ class _TimerScreenState extends State<TimerScreen> with TickerProviderStateMixin
                               ? formatTime(remainingTime)
                               : "Hackathon Over 🎉",
                           style: const TextStyle(
-                            fontSize: 60,
+                            fontSize: 100,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             shadows: [
